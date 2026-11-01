@@ -1,5 +1,5 @@
-// AudioSwitcher: tecla Mute -> toque corto = mutear, mantener = cambiar salida de audio.
-// Compilar: build.cmd (usa el csc.exe de .NET Framework que viene con Windows).
+// AudioSwitcher: Mute key -> short tap = mute, hold = switch audio output.
+// Build: build.cmd (uses the .NET Framework csc.exe that ships with Windows).
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -55,7 +55,7 @@ namespace AudioSwitcher
         [PreserveSig] int GetValue(ref PropertyKey key, out PropVariant value);
     }
 
-    // Interfaz no documentada (la que usan todos los switchers de audio) para cambiar el dispositivo por defecto.
+    // Undocumented interface (the one every audio switcher uses) to change the default device.
     [ComImport, Guid("f8679f50-850a-41cf-9c72-430f290290c8"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     interface IPolicyConfig
     {
@@ -124,7 +124,7 @@ namespace AudioSwitcher
         public static void SetDefault(string id)
         {
             var pc = (IPolicyConfig)new PolicyConfigClientCom();
-            for (int role = 0; role <= 2; role++) // consola, multimedia, comunicaciones
+            for (int role = 0; role <= 2; role++) // console, multimedia, communications
                 Marshal.ThrowExceptionForHR(pc.SetDefaultEndpoint(id, role));
         }
     }
@@ -221,7 +221,7 @@ namespace AudioSwitcher
     {
         const int WH_KEYBOARD_LL = 13, WM_KEYDOWN = 0x100, WM_KEYUP = 0x101, WM_SYSKEYDOWN = 0x104, WM_SYSKEYUP = 0x105;
         const int VK_VOLUME_MUTE = 0xAD;
-        static readonly IntPtr MY_MARK = (IntPtr)0x41535731; // marca para reconocer nuestras propias pulsaciones
+        static readonly IntPtr MY_MARK = (IntPtr)0x41535731; // tag to recognize our own injected key presses
 
         [StructLayout(LayoutKind.Sequential)]
         struct KBDLLHOOKSTRUCT { public int vkCode, scanCode, flags, time; public IntPtr extra; }
@@ -233,7 +233,7 @@ namespace AudioSwitcher
         [DllImport("user32.dll")] static extern void keybd_event(byte vk, byte scan, int flags, IntPtr extra);
         [DllImport("kernel32.dll")] static extern IntPtr GetModuleHandle(string name);
 
-        readonly HookProc proc;   // referencia viva para que el GC no se lo lleve
+        readonly HookProc proc;   // keep a reference so the GC does not collect it
         readonly IntPtr hook;
         readonly System.Windows.Forms.Timer holdTimer = new System.Windows.Forms.Timer();
         readonly Osd osd = new Osd();
@@ -252,7 +252,7 @@ namespace AudioSwitcher
 
             proc = HookCallback;
             hook = SetWindowsHookEx(WH_KEYBOARD_LL, proc, GetModuleHandle(null), 0);
-            if (hook == IntPtr.Zero) Log("SetWindowsHookEx falló: " + Marshal.GetLastWin32Error());
+            if (hook == IntPtr.Zero) Log("SetWindowsHookEx failed: " + Marshal.GetLastWin32Error());
         }
 
         public static string AppDir { get { return Path.GetDirectoryName(Application.ExecutablePath); } }
@@ -262,7 +262,7 @@ namespace AudioSwitcher
             if (nCode >= 0)
             {
                 var k = (KBDLLHOOKSTRUCT)Marshal.PtrToStructure(lParam, typeof(KBDLLHOOKSTRUCT));
-                // Diagnóstico: solo teclas "especiales" (no letras, números ni numpad)
+                // Diagnostics: only "special" keys (no letters, digits or numpad)
                 if (cfg.Debug && !(k.vkCode >= 0x30 && k.vkCode <= 0x5A) && !(k.vkCode >= 0x60 && k.vkCode <= 0x6F))
                     Log(string.Format("key msg=0x{0:X} vk=0x{1:X2} scan=0x{2:X} flags=0x{3:X} t={4}", wParam.ToInt32(), k.vkCode, k.scanCode, k.flags, k.time));
                 if (k.vkCode == VK_VOLUME_MUTE && k.extra != MY_MARK)
@@ -270,7 +270,7 @@ namespace AudioSwitcher
                     int msg = wParam.ToInt32();
                     if (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN)
                     {
-                        if (!keyDown) // ignorar auto-repeat
+                        if (!keyDown) // ignore auto-repeat
                         {
                             keyDown = true; switched = false;
                             holdTimer.Stop(); holdTimer.Start();
@@ -292,7 +292,7 @@ namespace AudioSwitcher
 
         void SendMute()
         {
-            // Reinyectamos la tecla: Windows hace el mute normal (con su OSD). El hook la deja pasar por MY_MARK.
+            // Re-inject the key so Windows performs the normal mute (with its OSD). The hook lets it through thanks to MY_MARK.
             keybd_event(VK_VOLUME_MUTE, 0, 1 /*EXTENDED*/, MY_MARK);
             keybd_event(VK_VOLUME_MUTE, 0, 1 | 2 /*KEYUP*/, MY_MARK);
         }
@@ -306,14 +306,14 @@ namespace AudioSwitcher
                 try
                 {
                     var all = Audio.GetOutputs().Where(d => !cfg.IsExcluded(d)).ToList();
-                    if (all.Count < 2) { Ui(() => osd.ShowText(all.Count == 0 ? "No hay salidas de audio" : "Solo hay una salida: " + all[0].Name)); return; }
+                    if (all.Count < 2) { Ui(() => osd.ShowText(all.Count == 0 ? "No audio outputs found" : "Only one output available: " + all[0].Name)); return; }
                     var cur = Audio.GetDefaultId();
                     int idx = all.FindIndex(d => d.Id == cur);
                     var next = all[(idx + 1) % all.Count];
                     Audio.SetDefault(next.Id);
                     Ui(() => osd.ShowText("🔊  " + next.Name));
                 }
-                catch (Exception ex) { Log("Switch: " + ex); Ui(() => osd.ShowText("Error cambiando salida (ver log)")); }
+                catch (Exception ex) { Log("Switch: " + ex); Ui(() => osd.ShowText("Error switching output (see log)")); }
                 finally { busy = false; }
             });
         }
@@ -344,7 +344,7 @@ namespace AudioSwitcher
             {
                 var cur = Audio.GetDefaultId();
                 foreach (var d in Audio.GetOutputs())
-                    Console.WriteLine((d.Id == cur ? "* " : "  ") + d.Name + (cfg.IsExcluded(d) ? "  [excluido]" : ""));
+                    Console.WriteLine((d.Id == cur ? "* " : "  ") + d.Name + (cfg.IsExcluded(d) ? "  [excluded]" : ""));
                 return;
             }
 
@@ -359,7 +359,7 @@ namespace AudioSwitcher
             bool created;
             using (var mutex = new Mutex(true, "AudioSwitcher.SingleInstance", out created))
             {
-                if (!created) return; // ya está corriendo
+                if (!created) return; // already running
                 Application.EnableVisualStyles();
                 Application.Run(new App(cfg, Path.Combine(dir, "audioswitcher.log")));
             }

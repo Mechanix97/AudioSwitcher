@@ -1,66 +1,66 @@
 # AudioSwitcher
 
-Le da una segunda función a la tecla **Mute** del teclado en Windows:
+Gives your keyboard's **Mute** key a second function on Windows:
 
-- **Toque corto** → mutea/desmutea como siempre.
-- **Mantener presionada** (~0,5 s) → cambia la salida de audio predeterminada a la siguiente y muestra un cartel en pantalla con el nombre.
+- **Short tap** → mute/unmute as usual.
+- **Hold** (~0.5 s) → switch the default audio output to the next device and show an on-screen popup with its name.
 
-No tiene ventana ni ícono en la bandeja: corre en segundo plano.
+No window and no tray icon: it runs silently in the background.
 
-## Descargar
+## Download
 
-Bajá el zip del [último release](https://github.com/Mechanix97/AudioSwitcher/releases/latest), descomprimilo y ejecutá `AudioSwitcher.exe`.
+Grab the zip from the [latest release](https://github.com/Mechanix97/AudioSwitcher/releases/latest), extract it and run `AudioSwitcher.exe`.
 
-## Requisitos
+## Requirements
 
-Windows 10/11. No hace falta instalar nada: se compila con el `csc.exe` de .NET Framework 4 que ya viene con Windows.
+Windows 10/11. Nothing to install: it builds with the .NET Framework 4 `csc.exe` that already ships with Windows.
 
-## Compilar
+## Build
 
 ```
 build.cmd
 ```
 
-Genera `AudioSwitcher.exe` en la misma carpeta.
+Produces `AudioSwitcher.exe` in the same folder.
 
-## Uso
+## Usage
 
-| Comando | Qué hace |
+| Command | What it does |
 |---|---|
-| `AudioSwitcher.exe` | Lo arranca en segundo plano (si ya está corriendo, no hace nada) |
-| `AudioSwitcher.exe --exit` | Cierra la instancia que está corriendo |
-| `AudioSwitcher.exe --list` | Lista las salidas de audio (`*` = la actual) |
+| `AudioSwitcher.exe` | Starts it in the background (does nothing if already running) |
+| `AudioSwitcher.exe --exit` | Stops the running instance |
+| `AudioSwitcher.exe --list` | Lists audio outputs (`*` = current) |
 
-### Arrancar con Windows
+### Run at startup
 
 ```powershell
 $s = (New-Object -ComObject WScript.Shell).CreateShortcut("$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\AudioSwitcher.lnk")
-$s.TargetPath = "<ruta>\AudioSwitcher.exe"; $s.Save()
+$s.TargetPath = "<path>\AudioSwitcher.exe"; $s.Save()
 ```
 
-## Configuración
+## Configuration
 
-`config.ini`, al lado del `.exe` (los cambios se aplican al reiniciar el programa):
+`config.ini`, next to the `.exe` (changes apply after restarting the program):
 
 ```ini
-# Milisegundos que hay que mantener Mute para cambiar de salida
+# How long (ms) the Mute key must be held to switch output
 holdMs=500
 
-# Salidas que se saltean al ciclar (parte del nombre). Una por línea.
+# Outputs skipped when cycling (partial name match). One per line.
 exclude=Steam Streaming
 
-# 1 = registra en audioswitcher.log los códigos de las teclas especiales
-# (no letras/números). Útil si la tecla no responde.
+# 1 = log special-key codes (not letters/digits) to audioswitcher.log.
+# Useful if the key doesn't respond.
 debug=0
 ```
 
-## Cómo funciona
+## How it works
 
-- Un hook de teclado de bajo nivel (`WH_KEYBOARD_LL`) intercepta `VK_VOLUME_MUTE`.
-- Si se suelta antes de `holdMs`, reinyecta la tecla para que Windows haga el mute normal (con su OSD). Las pulsaciones propias se marcan con `dwExtraInfo` en lugar de usar el flag `LLKHF_INJECTED`, porque algunos teclados (p. ej. Lenovo) entregan el Mute físico ya marcado como inyectado.
-- Para cambiar la salida usa la interfaz COM no documentada `IPolicyConfig` (la misma que usan todos los switchers de audio), en los tres roles: consola, multimedia y comunicaciones.
+- A low-level keyboard hook (`WH_KEYBOARD_LL`) intercepts `VK_VOLUME_MUTE`.
+- If the key is released before `holdMs`, it re-injects the key so Windows performs the normal mute (with its OSD). Its own key presses are tagged via `dwExtraInfo` instead of relying on the `LLKHF_INJECTED` flag, because some keyboards (e.g. Lenovo) deliver the physical Mute key already flagged as injected.
+- To switch the output it uses the undocumented `IPolicyConfig` COM interface (the same one every audio switcher uses), for all three roles: console, multimedia and communications.
 
-## Limitaciones
+## Limitations
 
-- Si un juego corre como administrador, el hook no recibe la tecla mientras ese juego tiene el foco (hay que correr AudioSwitcher como admin también).
-- El cartel no se ve sobre juegos en pantalla completa exclusiva (sí en ventana sin bordes).
+- If a game runs as administrator, the hook won't receive the key while that game has focus (run AudioSwitcher as admin too).
+- The popup isn't visible over exclusive-fullscreen games (it is in borderless windowed).
