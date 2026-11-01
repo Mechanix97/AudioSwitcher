@@ -7,6 +7,10 @@ Le da una segunda función a la tecla **Mute** del teclado en Windows:
 
 No tiene ventana ni ícono en la bandeja: corre en segundo plano.
 
+## Descargar
+
+Bajá el zip del [último release](https://github.com/Mechanix97/AudioSwitcher/releases/latest), descomprimilo y ejecutá `AudioSwitcher.exe`.
+
 ## Requisitos
 
 Windows 10/11. No hace falta instalar nada: se compila con el `csc.exe` de .NET Framework 4 que ya viene con Windows.
